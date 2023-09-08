@@ -1,4 +1,4 @@
-package mattermost
+package client
 
 import (
 	"bytes"
@@ -12,12 +12,12 @@ import (
 	"github.com/duke0x/ts-notifier/config"
 )
 
-type Notifier struct {
+type Mattermost struct {
 	config.Mattermost
 }
 
-func NewNotifier(cfg config.Mattermost) *Notifier {
-	return &Notifier{cfg}
+func NewNotifier(cfg config.Mattermost) *Mattermost {
+	return &Mattermost{cfg}
 }
 
 type CreatePostRequest struct {
@@ -45,7 +45,7 @@ type CreatePostResponse struct {
 	Participants  interface{} `json:"participants"`
 }
 
-func (c Notifier) Notify(channel, message string) error {
+func (c *Mattermost) Notify(channel, message string) error {
 	url := strings.Join([]string{c.URL, "/api/v4/posts"}, "")
 
 	cr := CreatePostRequest{

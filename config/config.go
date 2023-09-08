@@ -31,26 +31,30 @@ type Jira struct {
 	AuthToken string `yaml:"auth_token"`
 }
 
-// Teams stores list of teams and members in this teams
-type Teams []struct {
+type Team struct {
 	// Name is a team name
 	Name string `yaml:"name"`
 	// Channel stores identifier in mattermost for this team
 	Channel string `yaml:"channel"`
 	// Members is a list of members in team
-	Members []struct {
-		// Name is a member name
-		Name string `yaml:"name"`
-		// JiraAccID is a member Jira account identifier.
-		// It is needed for fetching work logs.
-		JiraAccID string `yaml:"jira_account_id"`
-		// MattermostUsername is a member mattermost username
-		// It is needed for tagging user in mattermost notification message
-		MattermostUsername string `yaml:"mattermost_username"`
-		// Email is a user email, can be omitted
-		Email string `yaml:"email"`
-	} `yaml:"members"`
+	Members []Member `yaml:"members"`
 }
+
+type Member struct {
+	// Name is a member name
+	Name string `yaml:"name"`
+	// JiraAccID is a member Jira account identifier.
+	// It is needed for fetching work logs.
+	JiraAccID string `yaml:"jira_account_id"`
+	// MattermostUsername is a member mattermost username
+	// It is needed for tagging user in mattermost notification message
+	MattermostUsername string `yaml:"mattermost_username"`
+	// Email is a user email, can be omitted
+	Email string `yaml:"email"`
+}
+
+// Teams stores list of teams and members of this teams
+type Teams []Team
 
 // Notifier stores notifiers (Mattermost) settings
 type Notifier struct {
@@ -95,16 +99,16 @@ func ProcessArgs() (Args, error) {
 		"What day is to be reported, format: "+dayFormat+".",
 	)
 
+	if err := f.Parse(os.Args[1:]); err != nil {
+		_, _ = fmt.Fprintln(f.Output())
+		return Args{}, err
+	}
+
 	t, err := time.Parse(dayFormat, date)
 	if err != nil {
 		return Args{}, ErrBadDayFormat
 	}
 	a.Date = t
-
-	if err = f.Parse(os.Args[1:]); err != nil {
-		fmt.Fprintln(f.Output())
-		return Args{}, err
-	}
 
 	return a, nil
 }

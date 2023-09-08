@@ -1,4 +1,4 @@
-package jiraworklogs
+package client
 
 import (
 	"context"
@@ -14,59 +14,16 @@ import (
 	"github.com/duke0x/ts-notifier/model"
 )
 
-// WorkLogService fetched work-logs data from jira_worklogs service
-type WorkLogService struct {
+// Jira fetched work-logs data from jira worklogs service
+type Jira struct {
 	config.Jira
 }
 
-func NewWorkLogService(jiraParams config.Jira) *WorkLogService {
-	return &WorkLogService{jiraParams}
+func NewJira(jiraParams config.Jira) *Jira {
+	return &Jira{jiraParams}
 }
 
-// IssuesRsp stores issues work logs data as described in
-// https://developer.atlassian.om/cloud/jira/platform/rest/v3/api-group-issue-search/#api-rest-api-3-search-get
-type IssuesRsp struct {
-	Expand     string `json:"expand"`
-	StartAt    int    `json:"startAt"`
-	MaxResults int    `json:"maxResults"`
-	Total      int    `json:"total"`
-	Issues     []struct {
-		Expand string `json:"expand"`
-		ID     string `json:"id"`
-		Self   string `json:"self"`
-		Key    string `json:"key"`
-		Fields struct {
-			Summary string     `json:"summary"`
-			Worklog WorkLogRsp `json:"worklog"`
-		} `json:"fields"`
-	} `json:"issues"`
-}
-
-type WorkLogRsp struct {
-	StartAt    int `json:"startAt"`
-	MaxResults int `json:"maxResults"`
-	Total      int `json:"total"`
-	Worklogs   []struct {
-		Author struct {
-			AccountID    string `json:"accountId"`
-			EmailAddress string `json:"emailAddress,omitempty"`
-			DisplayName  string `json:"displayName"`
-		} `json:"author"`
-		UpdateAuthor struct {
-			AccountID    string `json:"accountId"`
-			EmailAddress string `json:"emailAddress,omitempty"`
-			DisplayName  string `json:"displayName"`
-		} `json:"updateAuthor"`
-		Comment          string `json:"comment"`
-		Created          string `json:"created"`
-		Updated          string `json:"updated"`
-		Started          string `json:"started"`
-		TimeSpentSeconds int    `json:"timeSpentSeconds"`
-		IssueID          string `json:"issueId"`
-	} `json:"worklogs"`
-}
-
-func (wls WorkLogService) WorkLogsPerIssues(
+func (wls *Jira) WorkLogsPerIssues(
 	user model.User,
 	startedAfter time.Time,
 	startedBefore time.Time,
@@ -100,7 +57,7 @@ func (wls WorkLogService) WorkLogsPerIssues(
 		}
 		_ = resp.Body.Close()
 
-		var wlResp WorkLogRsp
+		var wlResp workLogResponse
 		err = json.Unmarshal(rspData, &wlResp)
 		if err != nil {
 			return nil, fmt.Errorf("decoding jira_worklogs 'get worklogs' response: %w", err)
@@ -129,7 +86,7 @@ func (wls WorkLogService) WorkLogsPerIssues(
 	return wl, nil
 }
 
-func (wls WorkLogService) UserWorkedIssuesByDate(
+func (wls *Jira) UserWorkedIssuesByDate(
 	user model.User,
 	date time.Time,
 ) ([]model.Issue, error) {
@@ -175,7 +132,7 @@ func (wls WorkLogService) UserWorkedIssuesByDate(
 		return nil, fmt.Errorf("reqding jira_worklogs 'get worklogs' response: %w", err)
 	}
 
-	var wlResp IssuesRsp
+	var wlResp issuesResponse
 	err = json.Unmarshal(rspData, &wlResp)
 	if err != nil {
 		return nil, fmt.Errorf("decoding jira_worklogs 'get worklogs' response: %w", err)
@@ -190,4 +147,47 @@ func (wls WorkLogService) UserWorkedIssuesByDate(
 	}
 
 	return issues, nil
+}
+
+// issuesResponse stores issues work logs data as described in
+// https://developer.atlassian.om/cloud/jira/platform/rest/v3/api-group-issue-search/#api-rest-api-3-search-get
+type issuesResponse struct {
+	Expand     string `json:"expand"`
+	StartAt    int    `json:"startAt"`
+	MaxResults int    `json:"maxResults"`
+	Total      int    `json:"total"`
+	Issues     []struct {
+		Expand string `json:"expand"`
+		ID     string `json:"id"`
+		Self   string `json:"self"`
+		Key    string `json:"key"`
+		Fields struct {
+			Summary string          `json:"summary"`
+			Worklog workLogResponse `json:"worklog"`
+		} `json:"fields"`
+	} `json:"issues"`
+}
+
+type workLogResponse struct {
+	StartAt    int `json:"startAt"`
+	MaxResults int `json:"maxResults"`
+	Total      int `json:"total"`
+	Worklogs   []struct {
+		Author struct {
+			AccountID    string `json:"accountId"`
+			EmailAddress string `json:"emailAddress,omitempty"`
+			DisplayName  string `json:"displayName"`
+		} `json:"author"`
+		UpdateAuthor struct {
+			AccountID    string `json:"accountId"`
+			EmailAddress string `json:"emailAddress,omitempty"`
+			DisplayName  string `json:"displayName"`
+		} `json:"updateAuthor"`
+		Comment          string `json:"comment"`
+		Created          string `json:"created"`
+		Updated          string `json:"updated"`
+		Started          string `json:"started"`
+		TimeSpentSeconds int    `json:"timeSpentSeconds"`
+		IssueID          string `json:"issueId"`
+	} `json:"worklogs"`
 }

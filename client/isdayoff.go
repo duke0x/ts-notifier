@@ -1,12 +1,4 @@
-// Package isdayoff is used to define the type of day:
-// working, non-working or shortened day.
-// It uses http service isdayoff.ru.
-// IsDayOff.ru REST API:
-//   - description, https://www.isdayoff.ru/desc/
-//   - extended, https://www.isdayoff.ru/extapi/
-//
-// Important: currently this client implementation works only with russian work calendar
-package isdayoff
+package client
 
 import (
 	"bytes"
@@ -28,7 +20,7 @@ var (
 	ErrUnknown      = errors.New("service return non-specified code")
 )
 
-// isdayoff service response codes
+// IsDayOff.ru service response codes
 const (
 	errBadDay      = 100
 	errNoData      = 101
@@ -37,15 +29,15 @@ const (
 
 const URL = "https://isdayoff.ru"
 
-type Service struct{}
+type IsDayOff struct{}
 
-// CheckDay goes to isdayoff.ru site via https REST API with day parameter
-// and returns this day type. Day types described in model.DayType.
-// If service return error model.Error and error.
-func (s Service) CheckDay(dt time.Time) (model.DayType, error) {
+// FetchDayType returns the type of day: working, non-working or shortened day.
+// It goes to URL site via https REST API with day parameter
+// and returns this day type described in model.DayType.
+// If URL returns error this function returns model.Error and error.
+func (s IsDayOff) FetchDayType(ctx context.Context, dt time.Time) (model.DayType, error) {
 	day := dt.Format(model.DayFormat)
 	url := strings.Join([]string{URL, "/", day}, "")
-	ctx := context.Background()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return model.Error, fmt.Errorf("creating request to 'isdayof' service: %w", err)

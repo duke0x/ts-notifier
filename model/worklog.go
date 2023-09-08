@@ -24,3 +24,10 @@ type WorkLog struct {
 	// Comment is a short message 'what was done'.
 	Comment string `json:"comment"`
 }
+
+// Date returns work log date only
+func (wl WorkLog) Date() time.Time {
+	const hoursPerDay = 24
+
+	return wl.Started.Truncate(time.Hour * hoursPerDay)
+}

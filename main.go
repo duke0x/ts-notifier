@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/duke0x/ts-notifier/client"
 	"github.com/duke0x/ts-notifier/config"
-	"github.com/duke0x/ts-notifier/isdayoff"
-	"github.com/duke0x/ts-notifier/jiraworklogs"
-	"github.com/duke0x/ts-notifier/notifier/mattermost"
-	"github.com/duke0x/ts-notifier/tscalculator"
+	"github.com/duke0x/ts-notifier/internal/app"
+	"github.com/duke0x/ts-notifier/internal/stdoutnotifier"
 )
 
 type errCode int
@@ -40,22 +39,21 @@ func main() {
 	// read configuration from the file
 	cfg, err := config.ReadConfig(args.ConfigPath)
 	if err != nil {
-		exit(fmt.Sprintf(
-			"reading config file: %s",
-			err.Error(),
-		), readConfig)
+		exit(fmt.Sprintf("reading config file: %s", err.Error()), readConfig)
 	}
 
-	// TODO: validate config data
-
 	// initialize dependencies
-	dc := isdayoff.Service{}
-	ws := jiraworklogs.NewWorkLogService(cfg.Jira)
-	mmn := mattermost.NewNotifier(cfg.Mattermost)
+	do := client.IsDayOff{}
+	jira := client.NewJira(cfg.Jira)
+	tn := &stdoutnotifier.StdOut{}
+	// mm := client.NewNotifier(cfg.Mattermost)
 
-	tsc := tscalculator.New(dc, ws, mmn)
-	err = tsc.CheckDailyTimeSpends(args.Date, cfg.Teams)
-	if err != nil {
-		exit("checking time spends: "+err.Error(), checkTS)
+	a := app.NewCliApp(args, cfg, do, jira, tn)
+	// a := app.NewCliApp(args, cfg, do, jira, mm)
+	if err := a.Run(); err != nil {
+		exit(
+			fmt.Sprintf("check remaining time spends & notify: %s", err.Error()),
+			checkTS,
+		)
 	}
 }

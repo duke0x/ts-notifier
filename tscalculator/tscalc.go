@@ -1,14 +1,12 @@
 // Package tscalculator fetches information about current day model.DayType.
 // If day is non-working day it returns ErrNonWorkingDay.
-// Next it fetches all working logs for each team member in all teams.
-// Sends message to mattermost team-channel for each team
-// if almost one member has not spent all working hours per day.
 package tscalculator
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/duke0x/ts-notifier/config"
@@ -26,23 +24,29 @@ import (
 
 var ErrNonWorkingDay = errors.New("non working day")
 
+const (
+	hoursPerDay        = 24
+	hoursPerWorkingDay = 8
+)
+
 type TSCalc struct {
-	dc  DayChecker
+	dc  DayTypeFetcher
 	wlf WorkLogFetcher
-	n   Notifier
 }
 
-func New(dc DayChecker, wlf WorkLogFetcher, n Notifier) *TSCalc {
+func New(dc DayTypeFetcher, wlf WorkLogFetcher) *TSCalc {
 	return &TSCalc{
 		dc:  dc,
 		wlf: wlf,
-		n:   n,
 	}
 }
 
-type DayChecker interface {
-	CheckDay(dt time.Time) (model.DayType, error)
+//go:generate mockgen -source=tscalc.go -destination=mock/mock_tscalc.go
+type DayTypeFetcher interface {
+	FetchDayType(ctx context.Context, dt time.Time) (model.DayType, error)
 }
+
+// TODO: add context to params
 
 type WorkLogFetcher interface {
 	UserWorkedIssuesByDate(user model.User, date time.Time) ([]model.Issue, error)
@@ -54,101 +58,121 @@ type WorkLogFetcher interface {
 	) ([]model.WorkLog, error)
 }
 
-type Notifier interface {
-	Notify(channel, message string) error
+// MemberRemainSpend stores team member name and his remain time spend
+type MemberRemainSpend struct {
+	Member      config.Member
+	RemainSpend time.Duration
 }
 
-func (tsc TSCalc) CheckDailyTimeSpends(day time.Time, teams config.Teams) error {
+// TeamRemainSpends stores all team member time remain spends
+type TeamRemainSpends []MemberRemainSpend
+
+// RemainSpend returns remained time to spend for all members in team
+func (trs TeamRemainSpends) RemainSpend() time.Duration {
+	total := time.Duration(0)
+	for _, ms := range trs {
+		total += ms.RemainSpend
+	}
+
+	return total
+}
+
+func (trs TeamRemainSpends) Report(day time.Time) string {
+	// TODO: try to replace message building with template text/template
+	var report strings.Builder
+	report.WriteString("Отчет по списанию времени за " + day.Format("2006.01.02") + ":\n")
+
+	emptyReport := true
+	for _, urs := range trs {
+		if urs.RemainSpend > 0 {
+			emptyReport = false
+			report.WriteString("  - @" + urs.Member.MattermostUsername +
+				" нужно списать еще " + urs.RemainSpend.String() + ".\n")
+		}
+	}
+
+	if emptyReport {
+		report.WriteString("Все молодцы, все списания произведены! :)")
+	}
+
+	return report.String()
+}
+
+func (tsc TSCalc) CalcDailyTimeSpends(
+	day time.Time,
+	team config.Team,
+) (TeamRemainSpends, error) {
 	ds := day.Format(model.DayFormat)
-	dt, err := tsc.dc.CheckDay(day)
+	dt, err := tsc.dc.FetchDayType(context.Background(), day)
 	if err != nil {
-		return fmt.Errorf("checking day '%s': %w", ds, err)
+		return nil, fmt.Errorf("checking day '%s': %w", ds, err)
 	}
 
 	if dt == model.NoWorkDay {
-		return fmt.Errorf("%w; day: %s", ErrNonWorkingDay, ds)
+		return nil, fmt.Errorf("%w; day: %s", ErrNonWorkingDay, ds)
 	}
 
-	for _, team := range teams {
-		var teamMessage string
+	dayStart := day.Truncate(time.Hour * hoursPerDay)
+	dayEnd := day.Add(time.Hour*23 + time.Minute*59 + time.Second*59)
 
-		for _, member := range team.Members {
-			user := model.User(member.JiraAccID)
-			issues, err := tsc.wlf.UserWorkedIssuesByDate(user, day)
-			if err != nil {
-				return fmt.Errorf("fetching user worked issies: %w", err)
-			}
-
-			dayBefore := time.Date(day.Year(), day.Month(), day.Day(), 23, 59, 59, 0, time.Local)
-			wl, err := tsc.wlf.WorkLogsPerIssues(user, day, dayBefore, issues)
-			if err != nil {
-				return fmt.Errorf("fetching working issues: %w", err)
-			}
-
-			tsWorked := aggregateTimeSpent(wl, user, day)
-
-			tsRemain := remainTimeSpend(tsWorked, dt)
-
-			if tsRemain.Seconds() != 0 {
-				if teamMessage == "" {
-					teamMessage = "Отчет по списанию времени за " + day.Format("2006.01.02") + ":\n"
-				}
-
-				teamMessage += "  - @" + member.MattermostUsername + " нужно списать еще " + tsRemain.String() + ".\n"
-			}
+	trs := TeamRemainSpends{}
+	for _, member := range team.Members {
+		user := model.User(member.JiraAccID)
+		issues, err := tsc.wlf.UserWorkedIssuesByDate(user, day)
+		if err != nil {
+			return nil, fmt.Errorf("fetching user worked issies: %w", err)
 		}
 
-		if teamMessage != "" {
-			if err = tsc.n.Notify(team.Channel, teamMessage); err != nil {
-				return fmt.Errorf("notify about remaining time spends: %w", err)
-			}
-			fmt.Printf("notification for team '%s' sent\n", team.Name)
-		} else {
-			fmt.Println("all members of team", team.Name, "has written their timelogs correctly")
+		wl, err := tsc.wlf.WorkLogsPerIssues(user, dayStart, dayEnd, issues)
+		if err != nil {
+			return nil, fmt.Errorf("fetching working issues: %w", err)
 		}
+
+		tsWorked := calculateTimeSpent(user, wl, day)
+		tsRemain := remainTimeSpend(tsWorked, dt)
+
+		trs = append(trs, MemberRemainSpend{
+			Member:      member,
+			RemainSpend: tsRemain,
+		})
 	}
 
-	return nil
+	return trs, nil
 }
 
-func aggregateTimeSpent(
-	wls []model.WorkLog,
+// calculateTimeSpent returns total amount of all user work logs per day
+func calculateTimeSpent(
 	user model.User,
+	wls []model.WorkLog,
 	day time.Time,
-) time.Duration {
-	totalSecondsSpent := 0
+) (totalSpent time.Duration) {
+	day = day.Truncate(time.Hour * hoursPerDay)
+
 	for _, wl := range wls {
 		if wl.User != user {
 			continue
 		}
 
-		wly, wlm, wld := wl.Started.Date()
-		dayy, daym, dayd := day.Date()
-		if wly != dayy || wlm != daym || wld != dayd {
+		if !wl.Date().Equal(day) {
 			continue
 		}
 
-		totalSecondsSpent += wl.TimeSpentSeconds
+		totalSpent += time.Duration(wl.TimeSpentSeconds) * time.Second
 	}
 
-	ts, _ := time.ParseDuration(strconv.Itoa(totalSecondsSpent) + "s")
-
-	return ts
+	return
 }
 
-func remainTimeSpend(ts time.Duration, dayType model.DayType) time.Duration {
-	workDayTime := 28800 // 8h *3600s - regular work daytime
+func remainTimeSpend(ts time.Duration, dayType model.DayType) (diff time.Duration) {
+	workDayTime := hoursPerWorkingDay * time.Hour // regular work daytime
 
 	if dayType == model.ShortWorkDay {
-		workDayTime -= 3600 // remove 1h if day is short day
+		workDayTime -= time.Hour // remove 1h if day is short day
 	}
 
-	diffSec := 0
-	if int(ts.Seconds()) < workDayTime {
-		diffSec = workDayTime - int(ts.Seconds())
+	if ts < workDayTime {
+		diff = workDayTime - ts
 	}
 
-	diffTS, _ := time.ParseDuration(strconv.Itoa(diffSec) + "s")
-
-	return diffTS
+	return diff
 }
