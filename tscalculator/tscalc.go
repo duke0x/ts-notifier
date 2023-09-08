@@ -41,16 +41,18 @@ func New(dc DayTypeFetcher, wlf WorkLogFetcher) *TSCalc {
 	}
 }
 
-//go:generate mockgen -source=tscalc.go -destination=mock/mock_tscalc.go
 type DayTypeFetcher interface {
 	FetchDayType(ctx context.Context, dt time.Time) (model.DayType, error)
 }
 
-// TODO: add context to params
-
 type WorkLogFetcher interface {
-	UserWorkedIssuesByDate(user model.User, date time.Time) ([]model.Issue, error)
+	UserWorkedIssuesByDate(
+		ctx context.Context,
+		user model.User,
+		date time.Time,
+	) ([]model.Issue, error)
 	WorkLogsPerIssues(
+		ctx context.Context,
 		user model.User,
 		startedAfter time.Time,
 		startedBefore time.Time,
@@ -115,15 +117,16 @@ func (tsc TSCalc) CalcDailyTimeSpends(
 	dayStart := day.Truncate(time.Hour * hoursPerDay)
 	dayEnd := day.Add(time.Hour*23 + time.Minute*59 + time.Second*59)
 
+	ctx := context.Background()
 	trs := TeamRemainSpends{}
 	for _, member := range team.Members {
 		user := model.User(member.JiraAccID)
-		issues, err := tsc.wlf.UserWorkedIssuesByDate(user, day)
+		issues, err := tsc.wlf.UserWorkedIssuesByDate(ctx, user, day)
 		if err != nil {
 			return nil, fmt.Errorf("fetching user worked issies: %w", err)
 		}
 
-		wl, err := tsc.wlf.WorkLogsPerIssues(user, dayStart, dayEnd, issues)
+		wl, err := tsc.wlf.WorkLogsPerIssues(ctx, user, dayStart, dayEnd, issues)
 		if err != nil {
 			return nil, fmt.Errorf("fetching working issues: %w", err)
 		}

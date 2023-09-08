@@ -24,6 +24,7 @@ func NewJira(jiraParams config.Jira) *Jira {
 }
 
 func (wls *Jira) WorkLogsPerIssues(
+	ctx context.Context,
 	user model.User,
 	startedAfter time.Time,
 	startedBefore time.Time,
@@ -32,7 +33,6 @@ func (wls *Jira) WorkLogsPerIssues(
 	var wl []model.WorkLog
 	for _, issue := range issues {
 		fullURL := fmt.Sprintf("%s/rest/api/2/issue/%s/worklog", wls.URL, issue.Key)
-		ctx := context.Background()
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
 		qp := req.URL.Query()
 		qp.Add("startedAfter", strconv.FormatInt(startedAfter.UnixMilli(), 10))
@@ -87,6 +87,7 @@ func (wls *Jira) WorkLogsPerIssues(
 }
 
 func (wls *Jira) UserWorkedIssuesByDate(
+	ctx context.Context,
 	user model.User,
 	date time.Time,
 ) ([]model.Issue, error) {
@@ -96,7 +97,6 @@ func (wls *Jira) UserWorkedIssuesByDate(
 	}, "")
 
 	// Create a new HTTP request
-	ctx := context.Background()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)

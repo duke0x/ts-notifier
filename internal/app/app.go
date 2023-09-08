@@ -1,12 +1,8 @@
 package app
 
 import (
-	"context"
 	"fmt"
-	"time"
-
 	"github.com/duke0x/ts-notifier/config"
-	"github.com/duke0x/ts-notifier/model"
 	"github.com/duke0x/ts-notifier/tscalculator"
 )
 
@@ -14,20 +10,10 @@ type Notifier interface {
 	Notify(channel, message string) error
 }
 
-//go:generate mockgen -source=tscalc.go -destination=mock/mock_tscalc.go
-type DayTypeFetcher interface {
-	FetchDayType(ctx context.Context, dt time.Time) (model.DayType, error)
-}
-
-type WorkLogFetcher interface {
-	UserWorkedIssuesByDate(user model.User, date time.Time) ([]model.Issue, error)
-	WorkLogsPerIssues(
-		user model.User,
-		startedAfter time.Time,
-		startedBefore time.Time,
-		issues []model.Issue,
-	) ([]model.WorkLog, error)
-}
+////go:generate mockgen -source=tscalc.go -destination=mock/mock_tscalc.go
+//type DayTypeFetcher interface {
+//	FetchDayType(ctx context.Context, dt time.Time) (model.DayType, error)
+//}
 
 type App struct {
 	args        config.Args
