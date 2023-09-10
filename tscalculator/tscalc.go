@@ -41,6 +41,7 @@ func New(dc DayTypeFetcher, wlf WorkLogFetcher) *TSCalc {
 	}
 }
 
+//go:generate mockgen -source=tscalc.go -destination=../mock/mock_tscalc.go
 type DayTypeFetcher interface {
 	FetchDayType(ctx context.Context, dt time.Time) (model.DayType, error)
 }
@@ -100,6 +101,9 @@ func (trs TeamRemainSpends) Report(day time.Time) string {
 	return report.String()
 }
 
+// CalcDailyTimeSpends returns remaining time spends for a team per day.
+// It determines the model.DayType of the day and fetches all team members work logs.
+// Then it calculates remaining time spent depends on model.DayType.
 func (tsc TSCalc) CalcDailyTimeSpends(
 	day time.Time,
 	team config.Team,
@@ -114,8 +118,8 @@ func (tsc TSCalc) CalcDailyTimeSpends(
 		return nil, fmt.Errorf("%w; day: %s", ErrNonWorkingDay, ds)
 	}
 
-	dayStart := day.Truncate(time.Hour * hoursPerDay)
-	dayEnd := day.Add(time.Hour*23 + time.Minute*59 + time.Second*59)
+	dayStart := day.Truncate(time.Hour * hoursPerDay).UTC()
+	dayEnd := dayStart.Add(time.Hour*23 + time.Minute*59 + time.Second*59)
 
 	ctx := context.Background()
 	trs := TeamRemainSpends{}

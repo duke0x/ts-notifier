@@ -79,7 +79,7 @@ type Args struct {
 }
 
 // ProcessArgs processes command arguments and fills the Args structure
-func ProcessArgs() (Args, error) {
+func ProcessArgs(args []string) (Args, error) {
 	var a Args
 
 	f := flag.NewFlagSet("time spends notifier", 1)
@@ -99,7 +99,7 @@ func ProcessArgs() (Args, error) {
 		"What day is to be reported, format: "+dayFormat+".",
 	)
 
-	if err := f.Parse(os.Args[1:]); err != nil {
+	if err := f.Parse(args); err != nil {
 		_, _ = fmt.Fprintln(f.Output())
 		return Args{}, err
 	}

@@ -5,7 +5,7 @@ const DayFormat = "20060102"
 type DayType int
 
 const (
-	Error DayType = -1
+	DayError DayType = -1
 	// WorkDay is a regular working day.
 	// For example, in Russia it lasts 8 hours for 40h/week.
 	WorkDay DayType = 0
@@ -26,9 +26,9 @@ func (t DayType) String() string {
 		return "Non-working day"
 	case ShortWorkDay:
 		return "Short working day"
-	case Error:
+	case DayError:
 		fallthrough
 	default:
-		return "error"
+		return "Day error"
 	}
 }

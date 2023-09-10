@@ -25,7 +25,7 @@ func exit(message string, code errCode) {
 }
 
 func main() {
-	args, err := config.ProcessArgs()
+	args, err := config.ProcessArgs(os.Args[1:])
 	if err != nil {
 		if errors.Is(err, config.ErrBadDayFormat) {
 			exit(fmt.Sprintf(

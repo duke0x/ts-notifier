@@ -34,13 +34,13 @@ type IsDayOff struct{}
 // FetchDayType returns the type of day: working, non-working or shortened day.
 // It goes to URL site via https REST API with day parameter
 // and returns this day type described in model.DayType.
-// If URL returns error this function returns model.Error and error.
+// If URL returns error this function returns model.DayError and error.
 func (s IsDayOff) FetchDayType(ctx context.Context, dt time.Time) (model.DayType, error) {
 	day := dt.Format(model.DayFormat)
 	url := strings.Join([]string{URL, "/", day}, "")
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return model.Error, fmt.Errorf("creating request to 'isdayof' service: %w", err)
+		return model.DayError, fmt.Errorf("creating request to 'isdayof' service: %w", err)
 	}
 
 	qp := req.URL.Query()
@@ -50,10 +50,10 @@ func (s IsDayOff) FetchDayType(ctx context.Context, dt time.Time) (model.DayType
 	cli := http.Client{}
 	resp, err := cli.Do(req)
 	if err != nil {
-		return model.Error, fmt.Errorf("sending request to 'isdayof' service: %w", err)
+		return model.DayError, fmt.Errorf("sending request to 'isdayof' service: %w", err)
 	}
 	if resp == nil {
-		return model.Error, errors.New("response is nil")
+		return model.DayError, errors.New("response is nil")
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -62,7 +62,7 @@ func (s IsDayOff) FetchDayType(ctx context.Context, dt time.Time) (model.DayType
 	var bb bytes.Buffer
 	_, err = bb.ReadFrom(resp.Body)
 	if err != nil {
-		return model.Error, fmt.Errorf("reading 'isdayof' response: %w", err)
+		return model.DayError, fmt.Errorf("reading 'isdayof' response: %w", err)
 	}
 
 	const (
@@ -72,21 +72,21 @@ func (s IsDayOff) FetchDayType(ctx context.Context, dt time.Time) (model.DayType
 
 	rc, err := strconv.Atoi(bb.String())
 	if err != nil {
-		return model.Error, fmt.Errorf("service return non-integer code")
+		return model.DayError, fmt.Errorf("service return non-integer code")
 	}
 	if resp.StatusCode/100 == err4XX {
 		switch rc {
 		case errBadDay:
-			return model.Error, ErrBadDayFormat
+			return model.DayError, ErrBadDayFormat
 		case errNoData:
-			return model.Error, ErrDataNotFound
+			return model.DayError, ErrDataNotFound
 		case errUnavailable:
-			return model.Error, ErrServiceError
+			return model.DayError, ErrServiceError
 		default:
-			return model.Error, ErrUnknown
+			return model.DayError, ErrUnknown
 		}
 	} else if resp.StatusCode/100 == err5XX {
-		return model.Error, ErrServiceError
+		return model.DayError, ErrServiceError
 	}
 
 	return model.DayType(rc), nil

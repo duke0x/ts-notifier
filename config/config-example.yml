@@ -15,6 +15,8 @@ teams:
       - name: <my team member 1>
         jira_account_id: <team member 1 jira account ID>
         mattermost_username: <team member 1 mattermost name>
+        email: member1@myorg.com
       - name: <my team member 2>
         jira_account_id: <team member 2 jira account ID>
         mattermost_username: <team member 2 mattermost name>
+        email: member2@myorg.com

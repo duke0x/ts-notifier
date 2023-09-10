@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+
 	"github.com/duke0x/ts-notifier/config"
 	"github.com/duke0x/ts-notifier/tscalculator"
 )
@@ -9,11 +10,6 @@ import (
 type Notifier interface {
 	Notify(channel, message string) error
 }
-
-////go:generate mockgen -source=tscalc.go -destination=mock/mock_tscalc.go
-//type DayTypeFetcher interface {
-//	FetchDayType(ctx context.Context, dt time.Time) (model.DayType, error)
-//}
 
 type App struct {
 	args        config.Args
