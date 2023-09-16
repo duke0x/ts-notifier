@@ -86,7 +86,7 @@ func ProcessArgs(args []string) (Args, error) {
 	f.StringVar(
 		&a.ConfigPath,
 		"c",
-		"config.yml",
+		"./config.yml",
 		"Path to configuration file",
 	)
 

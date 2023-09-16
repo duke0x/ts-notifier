@@ -3,13 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/duke0x/ts-notifier/internal/stdoutnotifier"
 	"net/http"
 	"os"
 
 	"github.com/duke0x/ts-notifier/client"
 	"github.com/duke0x/ts-notifier/config"
 	"github.com/duke0x/ts-notifier/internal/app"
-	"github.com/duke0x/ts-notifier/internal/stdoutnotifier"
 )
 
 type errCode int
@@ -46,11 +46,14 @@ func main() {
 	// initialize dependencies
 	do := client.NewIsDayOff(&http.Client{}, client.IsDayOffURL)
 	jira := client.NewJiraCli(&http.Client{}, cfg.Jira)
-	tn := &stdoutnotifier.StdOut{}
-	//mm := client.NewNotifier(&http.Client{}, cfg.Mattermost)
+	var n app.Notifier
+	n = client.NewNotifier(&http.Client{}, cfg.Mattermost)
+	if cfg.Mattermost.URL == "" {
+		n = &stdoutnotifier.StdOut{}
+	}
 
-	a := app.NewCliApp(args, cfg, do, jira, tn)
-	// a := app.NewCliApp(args, cfg, do, jira, mm)
+	a := app.NewCliApp(args, cfg, do, jira, n)
+	// a := app.NewCliApp(args, cfg, do, jira, tn)
 	if err := a.Run(); err != nil {
 		exit(
 			fmt.Sprintf("check remaining time spends & notify: %s", err.Error()),
