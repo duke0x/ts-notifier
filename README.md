@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/duke0x/ts-notifier)](https://goreportcard.com/report/github.com/duke0x/ts-notifier)
+
 # Time Spend Notifier
 
 Эта утилита предназначена для подсчета отработанного времени каждого участника команды и 
