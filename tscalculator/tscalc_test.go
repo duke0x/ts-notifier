@@ -2,10 +2,13 @@ package tscalculator
 
 import (
 	"context"
+	"errors"
+	"github.com/duke0x/ts-notifier/client"
 	"github.com/duke0x/ts-notifier/config"
 	mock_tscalculator "github.com/duke0x/ts-notifier/mock"
 	"github.com/duke0x/ts-notifier/model"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
 	"time"
@@ -174,6 +177,42 @@ func TestTSCalc_CalcDailyTimeSpends(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("CalcDailyTimeSpends() got = %+v, want %+v", got, want)
 	}
+}
+
+func TestTSCalc_CalcDailyTimeSpendsErrServiceError(t *testing.T) {
+	ctx := context.Background()
+
+	ctrl := gomock.NewController(t)
+	dc := mock_tscalculator.NewMockDayTypeFetcher(ctrl)
+	wlf := mock_tscalculator.NewMockWorkLogFetcher(ctrl)
+
+	// input params
+	var (
+		day  = time.Now()
+		team = config.Team{
+			Name:    "team1",
+			Channel: "chan1",
+			Members: []config.Member{{
+				Name:               "user1",
+				JiraAccID:          "user1_Jira_ID",
+				MattermostUsername: "user1_MM_ID",
+				Email:              "user1@example.com",
+			}},
+		}
+	)
+
+	dc.EXPECT().FetchDayType(ctx, day).Return(model.DayError, client.ErrServiceUnavailable)
+
+	tsc := TSCalc{
+		dc:  dc,
+		wlf: wlf,
+	}
+
+	wantErr := client.ErrServiceUnavailable
+	dayType, err := tsc.CalcDailyTimeSpends(day, team)
+	require.Equal(t, true, errors.Is(err, wantErr))
+	var trs TeamRemainSpends
+	require.Equal(t, trs, dayType)
 }
 
 func TestTeamRemainSpends_RemainSpend(t *testing.T) {

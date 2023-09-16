@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/duke0x/ts-notifier/client"
@@ -43,10 +44,10 @@ func main() {
 	}
 
 	// initialize dependencies
-	do := client.IsDayOff{}
-	jira := client.NewJira(cfg.Jira)
+	do := client.NewIsDayOff(&http.Client{}, client.IsDayOffURL)
+	jira := client.NewJiraCli(&http.Client{}, cfg.Jira)
 	tn := &stdoutnotifier.StdOut{}
-	// mm := client.NewNotifier(cfg.Mattermost)
+	//mm := client.NewNotifier(&http.Client{}, cfg.Mattermost)
 
 	a := app.NewCliApp(args, cfg, do, jira, tn)
 	// a := app.NewCliApp(args, cfg, do, jira, mm)

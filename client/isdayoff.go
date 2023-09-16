@@ -14,10 +14,10 @@ import (
 )
 
 var (
-	ErrBadDayFormat = errors.New("invalid day format. example: YYYYMMDD or YYYY-MM-DD")
-	ErrDataNotFound = errors.New("day data not found")
-	ErrServiceError = errors.New("service not working")
-	ErrUnknown      = errors.New("service return non-specified code")
+	ErrBadDayFormat       = errors.New("invalid day format. example: YYYYMMDD or YYYY-MM-DD")
+	ErrDataNotFound       = errors.New("day data not found")
+	ErrServiceUnavailable = errors.New("service not working")
+	ErrUnknown            = errors.New("service return non-specified code")
 )
 
 // IsDayOff.ru service response codes
@@ -27,17 +27,29 @@ const (
 	errUnavailable = 199
 )
 
-const URL = "https://isdayoff.ru"
+const IsDayOffURL = "https://isdayoff.ru"
 
-type IsDayOff struct{}
+type IsDayOff struct {
+	client *http.Client
+	url    string
+}
+
+func NewIsDayOff(client *http.Client, srvURL string) IsDayOff {
+	url := IsDayOffURL
+	if srvURL != "" {
+		url = srvURL
+	}
+
+	return IsDayOff{client: client, url: url}
+}
 
 // FetchDayType returns the type of day: working, non-working or shortened day.
-// It goes to URL site via https REST API with day parameter
+// It goes to IsDayOffURL site via https REST API with day parameter
 // and returns this day type described in model.DayType.
-// If URL returns error this function returns model.DayError and error.
-func (s IsDayOff) FetchDayType(ctx context.Context, dt time.Time) (model.DayType, error) {
+// If IsDayOffURL returns error this function returns model.DayError and error.
+func (i IsDayOff) FetchDayType(ctx context.Context, dt time.Time) (model.DayType, error) {
 	day := dt.Format(model.DayFormat)
-	url := strings.Join([]string{URL, "/", day}, "")
+	url := strings.Join([]string{i.url, "/", day}, "")
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return model.DayError, fmt.Errorf("creating request to 'isdayof' service: %w", err)
@@ -47,8 +59,7 @@ func (s IsDayOff) FetchDayType(ctx context.Context, dt time.Time) (model.DayType
 	qp.Add("pre", "1") // check if day is short
 	req.URL.RawQuery = qp.Encode()
 
-	cli := http.Client{}
-	resp, err := cli.Do(req)
+	resp, err := i.client.Do(req)
 	if err != nil {
 		return model.DayError, fmt.Errorf("sending request to 'isdayof' service: %w", err)
 	}
@@ -65,28 +76,24 @@ func (s IsDayOff) FetchDayType(ctx context.Context, dt time.Time) (model.DayType
 		return model.DayError, fmt.Errorf("reading 'isdayof' response: %w", err)
 	}
 
-	const (
-		err4XX = 4
-		err5XX = 5
-	)
-
 	rc, err := strconv.Atoi(bb.String())
 	if err != nil {
 		return model.DayError, fmt.Errorf("service return non-integer code")
 	}
-	if resp.StatusCode/100 == err4XX {
+	if resp.StatusCode == http.StatusBadRequest ||
+		resp.StatusCode == http.StatusNotFound {
 		switch rc {
 		case errBadDay:
 			return model.DayError, ErrBadDayFormat
 		case errNoData:
 			return model.DayError, ErrDataNotFound
 		case errUnavailable:
-			return model.DayError, ErrServiceError
+			return model.DayError, ErrServiceUnavailable
 		default:
 			return model.DayError, ErrUnknown
 		}
-	} else if resp.StatusCode/100 == err5XX {
-		return model.DayError, ErrServiceError
+	} else if resp.StatusCode >= http.StatusInternalServerError {
+		return model.DayError, ErrServiceUnavailable
 	}
 
 	return model.DayType(rc), nil

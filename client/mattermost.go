@@ -8,16 +8,18 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/duke0x/ts-notifier/config"
 )
 
 type Mattermost struct {
-	config.Mattermost
+	client *http.Client
+	config config.Mattermost
 }
 
-func NewNotifier(cfg config.Mattermost) *Mattermost {
-	return &Mattermost{cfg}
+func NewNotifier(client *http.Client, cfg config.Mattermost) *Mattermost {
+	return &Mattermost{client: client, config: cfg}
 }
 
 type CreatePostRequest struct {
@@ -46,7 +48,7 @@ type CreatePostResponse struct {
 }
 
 func (c *Mattermost) Notify(channel, message string) error {
-	url := strings.Join([]string{c.URL, "/api/v4/posts"}, "")
+	url := strings.Join([]string{c.config.URL, "/api/v4/posts"}, "")
 
 	cr := CreatePostRequest{
 		ChannelID: channel,
@@ -55,8 +57,11 @@ func (c *Mattermost) Notify(channel, message string) error {
 	crData, _ := json.Marshal(cr)
 
 	// Create a new HTTP request
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second) //nolint:gomnd
+	defer cancel()
+
 	req, err := http.NewRequestWithContext(
-		context.Background(),
+		ctx,
 		http.MethodPost,
 		url,
 		bytes.NewBuffer(crData),
@@ -67,11 +72,10 @@ func (c *Mattermost) Notify(channel, message string) error {
 
 	// Set headers
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.AuthToken)
+	req.Header.Set("Authorization", "Bearer "+c.config.AuthToken)
 
 	// Send the request
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("sending 'post message to channel' request: %w", err)
 	}

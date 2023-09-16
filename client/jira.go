@@ -16,11 +16,12 @@ import (
 
 // Jira fetched work-logs data from jira worklogs service
 type Jira struct {
-	config.Jira
+	client *http.Client
+	config config.Jira
 }
 
-func NewJira(jiraParams config.Jira) *Jira {
-	return &Jira{jiraParams}
+func NewJiraCli(client *http.Client, params config.Jira) *Jira {
+	return &Jira{client: client, config: params}
 }
 
 func (wls *Jira) WorkLogsPerIssues(
@@ -32,7 +33,7 @@ func (wls *Jira) WorkLogsPerIssues(
 ) ([]model.WorkLog, error) {
 	var wl []model.WorkLog
 	for _, issue := range issues {
-		fullURL := fmt.Sprintf("%s/rest/api/2/issue/%s/worklog", wls.URL, issue.Key)
+		fullURL := fmt.Sprintf("%s/rest/api/2/issue/%s/worklog", wls.config.URL, issue.Key)
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
 		qp := req.URL.Query()
 		qp.Add("startedAfter", strconv.FormatInt(startedAfter.UnixMilli(), 10))
@@ -42,11 +43,10 @@ func (wls *Jira) WorkLogsPerIssues(
 			return nil, fmt.Errorf("creating request: %w", err)
 		}
 
-		req.SetBasicAuth(wls.UserEmail, wls.AuthToken)
+		req.SetBasicAuth(wls.config.UserEmail, wls.config.AuthToken)
 		req.Header.Set("Accept", "application/json")
 
-		client := &http.Client{}
-		resp, err := client.Do(req)
+		resp, err := wls.client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("sending 'get worklogs' request: %w", err)
 		}
@@ -92,7 +92,7 @@ func (wls *Jira) UserWorkedIssuesByDate(
 	date time.Time,
 ) ([]model.Issue, error) {
 	url := strings.Join([]string{
-		wls.URL,
+		wls.config.URL,
 		"/rest/api/2/search",
 	}, "")
 
@@ -103,7 +103,7 @@ func (wls *Jira) UserWorkedIssuesByDate(
 	}
 
 	// Set headers
-	req.SetBasicAuth(wls.UserEmail, wls.AuthToken)
+	req.SetBasicAuth(wls.config.UserEmail, wls.config.AuthToken)
 	req.Header.Set("Accept", "application/json")
 
 	jql := fmt.Sprintf(
@@ -119,8 +119,7 @@ func (wls *Jira) UserWorkedIssuesByDate(
 	req.URL.RawQuery = qp.Encode()
 
 	// Send the request
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := wls.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("sending 'get worklogs' request: %w", err)
 	}
