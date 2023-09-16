@@ -1,0 +1,22 @@
+jira: # This section stores Jira credentials, minimum requirements: read access
+  url: https://myorg.atlassian.net # Jira service hostname with http | https
+  user_email: user@emample.com # Jira user
+  auth_token: <user-token> # Jira user access token
+
+notifier:
+  mattermost:
+    url: https://chat.myorg.com
+    auth_token: <service-user-token>
+
+teams:
+  - name: my-jira-team-name
+    channel: <my-mattermost-team-channel-ID>
+    members:
+      - name: <my team member 1>
+        jira_account_id: <team member 1 jira account ID>
+        mattermost_username: <team member 1 mattermost name>
+        email: member1@myorg.com
+      - name: <my team member 2>
+        jira_account_id: <team member 2 jira account ID>
+        mattermost_username: <team member 2 mattermost name>
+        email: member2@myorg.com
