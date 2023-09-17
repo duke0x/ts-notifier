@@ -67,7 +67,7 @@ func TestProcessArgs(t *testing.T) {
 			name: "no args",
 			args: []string{},
 			want: Args{
-				ConfigPath: "config.yml",
+				ConfigPath: "./config.yml",
 				Date:       time.Now().Truncate(24 * time.Hour).UTC(),
 			},
 			wantErr: false,
@@ -76,7 +76,7 @@ func TestProcessArgs(t *testing.T) {
 			name: "set custom date",
 			args: []string{"-d=2023-09-09"},
 			want: Args{
-				ConfigPath: "config.yml",
+				ConfigPath: "./config.yml",
 				Date:       time.Date(2023, 9, 9, 0, 0, 0, 0, time.UTC),
 			},
 			wantErr: false,

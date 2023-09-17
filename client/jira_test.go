@@ -34,9 +34,6 @@ func TestUserWorkedIssuesByDate(t *testing.T) {
 				jql := rp.Get("jql")
 				require.NotEmpty(t, jql)
 				_, _ = url.ParseQuery(jql)
-				//require.
-				//require.Equal(t, date.Format("2006-01-02"), rp.Get("worklogDate"))
-				//require.Equal(t, user, rp.Get("user"))
 
 				w.WriteHeader(http.StatusCreated)
 				resp := issuesResponse{}
