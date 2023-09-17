@@ -7,6 +7,7 @@ import (
 	"github.com/duke0x/ts-notifier/tscalculator"
 )
 
+//go:generate mockgen -package=mock_notifier -destination=../../mock/notifier/mock_notifier.go github.com/duke0x/ts-notifier/internal/app Notifier
 type Notifier interface {
 	Notify(channel, message string) error
 }
