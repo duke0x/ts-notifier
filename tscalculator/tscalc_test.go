@@ -5,7 +5,8 @@ import (
 	"errors"
 	"github.com/duke0x/ts-notifier/client"
 	"github.com/duke0x/ts-notifier/config"
-	mock_tscalculator "github.com/duke0x/ts-notifier/mock"
+	mock_day_type_fetcher "github.com/duke0x/ts-notifier/mock/day_type_fetcher"
+	mock_worklog_fetcher "github.com/duke0x/ts-notifier/mock/work_log_fetcher"
 	"github.com/duke0x/ts-notifier/model"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -103,8 +104,8 @@ func TestTSCalc_CalcDailyTimeSpends(t *testing.T) {
 	ctx := context.Background()
 
 	ctrl := gomock.NewController(t)
-	dc := mock_tscalculator.NewMockDayTypeFetcher(ctrl)
-	wlf := mock_tscalculator.NewMockWorkLogFetcher(ctrl)
+	dc := mock_day_type_fetcher.NewMockDayTypeFetcher(ctrl)
+	wlf := mock_worklog_fetcher.NewMockWorkLogFetcher(ctrl)
 
 	// input params
 	var (
@@ -183,8 +184,8 @@ func TestTSCalc_CalcDailyTimeSpendsErrServiceError(t *testing.T) {
 	ctx := context.Background()
 
 	ctrl := gomock.NewController(t)
-	dc := mock_tscalculator.NewMockDayTypeFetcher(ctrl)
-	wlf := mock_tscalculator.NewMockWorkLogFetcher(ctrl)
+	dc := mock_day_type_fetcher.NewMockDayTypeFetcher(ctrl)
+	wlf := mock_worklog_fetcher.NewMockWorkLogFetcher(ctrl)
 
 	// input params
 	var (
