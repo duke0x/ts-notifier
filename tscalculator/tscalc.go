@@ -41,11 +41,12 @@ func New(dc DayTypeFetcher, wlf WorkLogFetcher) *TSCalc {
 	}
 }
 
-//go:generate mockgen -source=tscalc.go -destination=../mock/mock_tscalc.go
+//go:generate mockgen -package=mock_day_type_fetcher -destination=../mock/day_type_fetcher/mock_day_type_fetcher.go github.com/duke0x/ts-notifier/tscalculator DayTypeFetcher
 type DayTypeFetcher interface {
 	FetchDayType(ctx context.Context, dt time.Time) (model.DayType, error)
 }
 
+//go:generate mockgen -package=mock_worklog_fetcher -destination=../mock/worklog_fetcher/mock_worklog_fetcher.go -destination=../mock/work_log_fetcher/mock_wl_fetcher.go github.com/duke0x/ts-notifier/tscalculator WorkLogFetcher
 type WorkLogFetcher interface {
 	UserWorkedIssuesByDate(
 		ctx context.Context,
