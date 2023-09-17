@@ -1,5 +1,5 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/duke0x/ts-notifier)](https://goreportcard.com/report/github.com/duke0x/ts-notifier) [![Go Reference](https://pkg.go.dev/badge/github.com/duke0x/ts-notifier.svg)](https://pkg.go.dev/github.com/duke0x/ts-notifier)
-![Coverage](https://img.shields.io/badge/Coverage-79.7%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-79.7%25-yellow)
 
 # Time Spend Notifier
 
