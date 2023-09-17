@@ -1,4 +1,4 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/duke0x/ts-notifier)](https://goreportcard.com/report/github.com/duke0x/ts-notifier)
+[![Go Report Card](https://goreportcard.com/badge/github.com/duke0x/ts-notifier)](https://goreportcard.com/report/github.com/duke0x/ts-notifier) [![Go Reference](https://pkg.go.dev/badge/github.com/duke0x/ts-notifier.svg)](https://pkg.go.dev/github.com/duke0x/ts-notifier)
 
 # Time Spend Notifier
 
