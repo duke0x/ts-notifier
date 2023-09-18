@@ -95,7 +95,7 @@ func ProcessArgs(args []string) (Args, error) {
 	f.StringVar(
 		&date,
 		"d",
-		time.Now().Format(dayFormat),
+		time.Now().UTC().Format(dayFormat),
 		"What day is to be reported, format: "+dayFormat+".",
 	)
 

@@ -68,7 +68,7 @@ func TestProcessArgs(t *testing.T) {
 			args: []string{},
 			want: Args{
 				ConfigPath: "./config.yml",
-				Date:       time.Now().Truncate(24 * time.Hour).UTC(),
+				Date:       time.Now().UTC().Truncate(24 * time.Hour),
 			},
 			wantErr: false,
 		},

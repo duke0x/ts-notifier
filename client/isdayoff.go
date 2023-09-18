@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	ErrNonIntegerCode     = errors.New("service return non-integer code")
 	ErrBadDayFormat       = errors.New("invalid day format. example: YYYYMMDD or YYYY-MM-DD")
 	ErrDataNotFound       = errors.New("day data not found")
 	ErrServiceUnavailable = errors.New("service not working")
@@ -78,7 +79,7 @@ func (i IsDayOff) FetchDayType(ctx context.Context, dt time.Time) (model.DayType
 
 	rc, err := strconv.Atoi(bb.String())
 	if err != nil {
-		return model.DayError, fmt.Errorf("service return non-integer code")
+		return model.DayError, ErrNonIntegerCode
 	}
 	if resp.StatusCode == http.StatusBadRequest ||
 		resp.StatusCode == http.StatusNotFound {
