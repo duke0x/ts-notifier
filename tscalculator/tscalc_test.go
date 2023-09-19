@@ -88,7 +88,47 @@ func Test_remainTimeSpend(t *testing.T) {
 				ts:      8 * time.Hour,
 				dayType: model.WorkDay,
 			},
-			wantDiff: 0,
+			wantDiff: 0 * time.Hour,
+		},
+		{
+			name: "regular day, spends more than needed",
+			args: args{
+				ts:      9 * time.Hour,
+				dayType: model.WorkDay,
+			},
+			wantDiff: 0 * time.Hour,
+		},
+		{
+			name: "regular day, spends less than needed",
+			args: args{
+				ts:      2 * time.Hour,
+				dayType: model.WorkDay,
+			},
+			wantDiff: 6 * time.Hour,
+		},
+		{
+			name: "short day, spends completed",
+			args: args{
+				ts:      7 * time.Hour,
+				dayType: model.ShortWorkDay,
+			},
+			wantDiff: 0 * time.Hour,
+		},
+		{
+			name: "short day, spends more than needed",
+			args: args{
+				ts:      8 * time.Hour,
+				dayType: model.ShortWorkDay,
+			},
+			wantDiff: 0 * time.Hour,
+		},
+		{
+			name: "short day, spends less than needed",
+			args: args{
+				ts:      2 * time.Hour,
+				dayType: model.ShortWorkDay,
+			},
+			wantDiff: 5 * time.Hour,
 		},
 	}
 	for _, tt := range tests {
@@ -154,11 +194,7 @@ func TestTSCalc_CalcDailyTimeSpends(t *testing.T) {
 		).Return(wls, nil)
 	}
 
-	tsc := TSCalc{
-		dc:  dc,
-		wlf: wlf,
-	}
-
+	tsc := New(dc, wlf)
 	got, err := tsc.CalcDailyTimeSpends(day, team)
 	if err != nil {
 		t.Errorf("CalcDailyTimeSpends() got error = %v, but error should be nil", err)
@@ -282,10 +318,22 @@ func TestTeamRemainSpends_Report(t *testing.T) {
 		want string
 	}{
 		{
-			name: "no spends",
+			name: "no spends remain",
 			trs:  TeamRemainSpends{},
-			args: args{day: time.Now().Truncate(24 * time.Hour).UTC()},
-			want: "Отчет по списанию времени за " + time.Now().Format("2006.01.02") + ":\nВсе молодцы, все списания произведены! :)",
+			args: args{day: time.Now().UTC().Truncate(24 * time.Hour)},
+			want: "Отчет по списанию времени за " + time.Now().UTC().Format("2006.01.02") + ":\nВсе молодцы, все списания произведены! :)",
+		},
+		{
+			name: "1 record of spends",
+			trs: TeamRemainSpends{MemberRemainSpend{
+				Member: config.Member{
+					MattermostUsername: "ivanov.i",
+				},
+				RemainSpend: 1 * time.Hour,
+			}},
+			args: args{day: time.Now().UTC().Truncate(24 * time.Hour)},
+			want: "Отчет по списанию времени за " + time.Now().UTC().Format("2006.01.02") + ":\n" +
+				"  - @ivanov.i нужно списать еще 1h0m0s.\n",
 		},
 	}
 	for _, tt := range tests {
