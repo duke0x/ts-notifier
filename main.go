@@ -3,13 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/duke0x/ts-notifier/internal/stdoutnotifier"
 	"net/http"
 	"os"
 
 	"github.com/duke0x/ts-notifier/client"
 	"github.com/duke0x/ts-notifier/config"
 	"github.com/duke0x/ts-notifier/internal/app"
+	"github.com/duke0x/ts-notifier/internal/stdoutnotifier"
 )
 
 type errCode int
