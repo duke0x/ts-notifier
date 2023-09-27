@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/duke0x/ts-notifier/config"
@@ -124,25 +125,43 @@ func (tsc TSCalc) CalcDailyTimeSpends(
 
 	ctx := context.Background()
 	trs := TeamRemainSpends{}
+	var wg sync.WaitGroup
+	wg.Add(len(team.Members))
+
+	remainMemberSpends := make(chan MemberRemainSpend, len(team.Members))
+
 	for _, member := range team.Members {
-		user := model.User(member.JiraAccID)
-		issues, err := tsc.wlf.UserWorkedIssuesByDate(ctx, user, day)
-		if err != nil {
-			return nil, fmt.Errorf("fetching user worked issies: %w", err)
-		}
+		go func(member config.Member) {
+			defer wg.Done()
 
-		wl, err := tsc.wlf.WorkLogsPerIssues(ctx, user, dayStart, dayEnd, issues)
-		if err != nil {
-			return nil, fmt.Errorf("fetching working issues: %w", err)
-		}
+			user := model.User(member.JiraAccID)
 
-		tsWorked := calculateTimeSpent(user, wl, day)
-		tsRemain := remainTimeSpend(tsWorked, dt)
+			issues, err := tsc.wlf.UserWorkedIssuesByDate(ctx, user, day)
+			if err != nil {
+				fmt.Printf("fetching user '%s' worked issies: %s\n", member.Name, err.Error())
+				return
+			}
 
-		trs = append(trs, MemberRemainSpend{
-			Member:      member,
-			RemainSpend: tsRemain,
-		})
+			wl, err := tsc.wlf.WorkLogsPerIssues(ctx, user, dayStart, dayEnd, issues)
+			if err != nil {
+				fmt.Printf("fetching working issues: %s\n", err.Error())
+				return
+			}
+
+			tsWorked := calculateTimeSpent(user, wl, day)
+			tsRemain := remainTimeSpend(tsWorked, dt)
+			remainMemberSpends <- MemberRemainSpend{
+				Member:      member,
+				RemainSpend: tsRemain,
+			}
+		}(member)
+	}
+
+	wg.Wait()
+	close(remainMemberSpends)
+
+	for mrs := range remainMemberSpends {
+		trs = append(trs, mrs)
 	}
 
 	return trs, nil
